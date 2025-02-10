@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Te Amo Mucho, Princesa</title>
+    <style>
+        body {
+            background: linear-gradient(120deg, #ffdde1, #ee9ca7);
+            overflow: hidden;
+            text-align: center;
+            font-family: 'Arial', sans-serif;
+        }
+        h1 {
+            color: #ff4b5c;
+        }
+        canvas {
+            /* Cambiar el fondo del canvas para que sea un tablero de ajedrez en tonos lilas */
+            background-color: #E6E6FA;
+            background-image: 
+                linear-gradient(0deg, #D8BFD8 2px, transparent 2px),
+                linear-gradient(90deg, #D8BFD8 2px, transparent 2px);
+            background-size: 20px 20px; /* Tamaño de los cuadrados */
+            border: 5px solid #ff4b5c;
+            margin-top: 20px;
+        }
+        .falling-roses, .falling-images {
+            position: absolute;
+            top: 0;
+            width: 50px;
+            height: 50px;
+            background-size: cover;
+            animation: fall linear infinite;
+        }
+        @keyframes fall {
+            from {
+                transform: translateY(-10vh);
+                opacity: 1;
+            }
+            to {
+                transform: translateY(100vh);
+                opacity: 0;
+            }
+        }
+        .controls {
+            display: flex;
+            justify-content: center;
+            margin-top: 10px;
+        }
+        .controls button {
+            font-size: 30px;
+            margin: 10px;
+            padding: 15px;
+            background: #ff4b5c;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+        }
+        #gameOverMessage {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(255, 255, 255, 0.9);
+            padding: 20px;
+            border: 2px solid #ff4b5c;
+            border-radius: 10px;
+            display: none;
+            text-align: center;
+        }
+        #gameOverMessage h2 {
+            margin: 0;
+            color: #ff4b5c;
+        }
+        #gameOverMessage button {
+            font-size: 20px;
+            margin-top: 10px;
+            padding: 10px 20px;
+            background: #ff4b5c;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <h1 id="gameMessage"></h1>
+    <canvas id="gameCanvas" width="400" height="400"></canvas>
+    <div class="controls">
+        <button onclick="changeDirection('UP')">⬆️</button>
+    </div>
+    <div class="controls">
+        <button onclick="changeDirection('LEFT')">⬅️</button>
+        <button onclick="changeDirection('RIGHT')">➡️</button>
+    </div>
+    <div class="controls">
+        <button onclick="changeDirection('DOWN')">⬇️</button>
+    </div>
+
+    <!-- Mensaje de fin de juego -->
+    <div id="gameOverMessage">
+        <h2>Amor, terminó el juego 💔</h2>
+        <p>¿Quieres volver a jugar?</p>
+        <button onclick="restartGame()">Sí</button>
+        <button onclick="endGame()">No</button>
+    </div>
+    
+    <!-- Música de fondo -->
+    <audio id="bgMusic" src="musica.mp3" autoplay loop></audio>
+    
+    <!-- Sonido al comer -->
+    <audio id="eatSound" src="musica.mp3"></audio>
+    
+    <script>
+        const canvas = document.getElementById("gameCanvas");
+        const ctx = canvas.getContext("2d");
+        let snake = [{ x: 200, y: 200 }];
+        let direction = "RIGHT";
+        let nextDirection = "RIGHT";
+        let food = { x: 100, y: 100 };
+        const eatSound = document.getElementById("eatSound");
+        let message = "Eres la persona que hace que cada día valga la pena. Tu sonrisa ilumina mi mundo y tu presencia me llena de felicidad. Gracias por un mes más no sabes cuanto muy feliz me haces, daria la vida por eres mi todo, te amo y te amare siempre .".split(" ");
+        let wordsEaten = 0;
+        const gameMessage = document.getElementById("gameMessage");
+        const gameOverMessage = document.getElementById("gameOverMessage");
+
+        function drawHeart(x, y) {
+            ctx.fillStyle = "red";
+            ctx.beginPath();
+            ctx.moveTo(x, y);
+            ctx.bezierCurveTo(x - 10, y - 10, x - 20, y + 10, x, y + 20);
+            ctx.bezierCurveTo(x + 20, y + 10, x + 10, y - 10, x, y);
+            ctx.fill();
+        }
+        
+        function drawGame() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            snake.forEach(segment => drawHeart(segment.x, segment.y));
+            drawHeart(food.x, food.y);
+            
+            gameMessage.innerText = message.slice(0, wordsEaten).join(" ");
+        }
+        
+        function moveSnake() {
+            direction = nextDirection;
+            let head = { ...snake[0] };
+            if (direction === "RIGHT") head.x += 20;
+            if (direction === "LEFT") head.x -= 20;
+            if (direction === "UP") head.y -= 20;
+            if (direction === "DOWN") head.y += 20;
+            
+            // Teletransportación al otro lado si sale de los límites
+            if (head.x < 0) head.x = canvas.width - 20;
+            if (head.x >= canvas.width) head.x = 0;
+            if (head.y < 0) head.y = canvas.height - 20;
+            if (head.y >= canvas.height) head.y = 0;
+            
+            snake.unshift(head);
+            if (head.x === food.x && head.y === food.y) {
+                eatSound.play();
+                wordsEaten++;
+                if (wordsEaten >= message.length) {
+                    showGameOverMessage();
+                } else {
+                    food = { x: Math.floor(Math.random() * 20) * 20, y: Math.floor(Math.random() * 20) * 20 };
+                }
+            } else {
+                snake.pop();
+            }
+        }
+        
+        function showGameOverMessage() {
+            gameOverMessage.style.display = 'block';
+        }
+        
+        function restartGame() {
+            gameOverMessage.style.display = 'none';
+            snake = [{ x: 200, y: 200 }];
+            direction = "RIGHT";
+            nextDirection = "RIGHT";
+            food = { x: 100, y: 100 };
+            wordsEaten = 0;
+            gameLoop();
+        }
+        
+        function endGame() {
+            gameOverMessage.style.display = 'none';
+            gameMessage.innerText = "¡Gracias por jugar! 💖";
+        }
+        
+        document.addEventListener("keydown", (event) => {
+            if (event.key === "ArrowRight" && direction !== "LEFT") nextDirection = "RIGHT";
+            if (event.key === "ArrowLeft" && direction !== "RIGHT") nextDirection = "LEFT";
+            if (event.key === "ArrowUp" && direction !== "DOWN") nextDirection = "UP";
+            if (event.key === "ArrowDown" && direction !== "UP") nextDirection = "DOWN";
+        });
+        
+        function changeDirection(newDirection) {
+            if ((newDirection === "RIGHT" && direction !== "LEFT") ||
+                (newDirection === "LEFT" && direction !== "RIGHT") ||
+                (newDirection === "UP" && direction !== "DOWN") ||
+                (newDirection === "DOWN" && direction !== "UP")) {
+                nextDirection = newDirection;
+            }
+        }
+        
+        function gameLoop() {
+            moveSnake();
+            drawGame();
+            setTimeout(gameLoop, 150);
+        }
+        gameLoop();
+
+        // Lista
+
+        // Lista de URLs de imágenes
+        const imageUrls = [
+            'imagen1.JPG',
+            'imagen2.JPG',
+            'imagen3.JPG',
+            'imagen4.JPG',
+            'imagen5.JPG',
+            'imagen6.JPG'
+            
+        ];
+        
+        function createFallingImage() {
+            const img = document.createElement("div");
+            img.classList.add("falling-images");
+            img.style.left = Math.random() * window.innerWidth + "px";
+            img.style.animationDuration = (Math.random() * 3 + 2) + "s";
+            
+            // Seleccionar una URL de imagen aleatoria de la lista
+            const randomIndex = Math.floor(Math.random() * imageUrls.length);
+            img.style.backgroundImage = `url('${imageUrls[randomIndex]}')`;
+            
+            document.body.appendChild(img);
+            setTimeout(() => img.remove(), 5000);
+        }
+        setInterval(createFallingImage, 1000);
+    </script>
+</body>
+</html>
